@@ -1,0 +1,438 @@
+# Importing the libraries
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error 
+from sklearn.linear_model import Lasso
+from sklearn.model_selection import GridSearchCV
+np.random.seed(10)
+
+
+# Importing the dataset
+dataset = pd.read_csv('abalone.data', header = None)
+dataset.head(3)
+
+
+#Summary of dataset
+dataset.info()
+
+X = dataset.iloc[:, :-1].values
+y = dataset.iloc[:, -1].values + 1.5
+
+
+# Change the first column to continuous. Instead of M and F. Change it to 0 and 1 (Two columns)
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
+# transform the first column
+ct = ColumnTransformer(transformers=[('encoder', OneHotEncoder(), [0])], remainder='passthrough')
+X_prepared = np.array(ct.fit_transform(X))
+X_prepared[1]
+
+
+
+# Splitting the dataset into the Training set and Test set
+X_train, X_test, y_train, y_test = train_test_split(X_prepared, y, test_size = 0.2, random_state = 0)
+
+
+# Training the Multiple Linear Regression model on the Training set
+from sklearn.linear_model import LinearRegression
+regressor = LinearRegression()
+regressor.fit(X_train, y_train)
+
+
+# Evaluating the Model Performance
+y_train_pred = regressor.predict(X_train)
+y_test_pred = regressor.predict(X_test)
+train_mse = mean_squared_error(y_train_pred, y_train)
+test_mse = mean_squared_error(y_test_pred, y_test)
+print("Train MSE: ", train_mse)
+print("Test MSE: ", test_mse)
+
+
+
+
+# Training the Random Forest Regression model on the whole dataset
+from sklearn.ensemble import RandomForestRegressor
+regressor = RandomForestRegressor(n_estimators = 10, random_state = 0)
+regressor.fit(X_train, y_train)
+
+# Evaluating the Model Performance
+y_train_pred = regressor.predict(X_train)
+y_test_pred = regressor.predict(X_test)
+train_mse = mean_squared_error(y_train_pred, y_train)
+test_mse = mean_squared_error(y_test_pred, y_test)
+print("Train MSE: ", train_mse)
+print("Test MSE: ", test_mse)
+
+
+
+
+
+#Random forest regressor overfit the training data, so will choose linear regression as the final
+#model, and use lasso for regularization
+model = Lasso()
+alpha_ranges = [1 / x for x in range(1,100,10)]
+parameters = {'alpha':alpha_ranges}
+Lasso_reg = GridSearchCV(model, parameters, scoring='r2', cv = 5)
+Lasso_reg.fit(X_train,y_train)
+print(Lasso_reg.best_estimator_)
+best_model = Lasso_reg.best_estimator_
+best_model.fit(X_train,y_train)
+
+
+
+
+y_train_pred=best_model.predict(X_train)
+y_test_pred=best_model.predict(X_test)
+
+
+
+
+# Evaluating the Model Performance
+train_mse=mean_squared_error(y_train, y_train_pred)
+test_mse=mean_squared_error(y_test, y_test_pred)
+print("Train MSE: ", train_mse)
+print("Test MSE: ", test_mse)
+
+
+
+#onto multi-class classifier, I will use randomforest classifier
+# Splitting the dataset into the Training set and Test set
+y = y.round(0)
+X_train, X_test, y_train, y_test = train_test_split(X_prepared, y, test_size = 0.2, random_state = 0)
+
+
+
+
+
+# Training the Random Forest Classification model on the Training set
+from sklearn.ensemble import RandomForestClassifier
+classifier = RandomForestClassifier(n_estimators = 10, criterion = 'entropy', random_state = 0)
+classifier.fit(X_train, y_train)
+
+
+
+
+
+# Making the Confusion Matrix
+from sklearn.metrics import confusion_matrix, accuracy_score
+y_pred = classifier.predict(X_test)
+cm = confusion_matrix(y_test, y_pred)
+print(cm)
+accuracy_score(y_test, y_pred)
+
+
+
+
+#Two linear regression, lasso and randomforest, one multiclass classifier model randomforest were run,
+# results shows neither model are accurately predicting the ablone age
+
+
+
+***************************************************************************************
+
+# Importing the libraries
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error 
+from sklearn.linear_model import Lasso
+from sklearn.model_selection import GridSearchCV
+np.random.seed(10)
+
+
+
+# Importing the dataset
+dataset = pd.read_csv('BostonHousing.csv')
+dataset.head(3)
+
+
+
+
+dataset.info()
+
+
+
+
+#Linear model to prodict NOX
+X = dataset.drop("nox", axis=1)
+y = dataset["nox"].copy()
+
+
+
+
+# Splitting the dataset into the Training set and Test set
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 0)
+
+
+
+#Lasso linear regressor
+model = Lasso()
+alpha_ranges = [1 / x for x in range(1,100,10)]
+parameters = {'alpha':alpha_ranges}
+Lasso_reg = GridSearchCV(model, parameters, scoring='neg_mean_squared_error', cv = 10)
+Lasso_reg.fit(X_train,y_train)
+print(Lasso_reg.best_estimator_)
+best_model = Lasso_reg.best_estimator_
+best_model.fit(X_train,y_train)
+
+
+
+
+y_train_pred=best_model.predict(X_train)
+y_test_pred=best_model.predict(X_test)
+
+
+
+
+# Evaluating the Model Performance
+train_mse=mean_squared_error(y_train, y_train_pred)
+test_mse=mean_squared_error(y_test, y_test_pred)
+print("Train MSE: ", train_mse)
+print("Test MSE: ", test_mse)
+
+
+
+
+#Use cross validation to run the model again, since the dataset is quite small
+from sklearn.model_selection import cross_val_score
+scores = cross_val_score(model, X_train, y_train,
+                         scoring="neg_mean_squared_error", cv=10)
+Lasso_mse_scores = -scores
+
+
+
+
+def display_scores(scores):
+    print("Scores:", scores)
+    print("Mean:", scores.mean())
+    print("Standard deviation:", scores.std())
+
+
+
+
+
+
+ display_scores(Lasso_mse_scores)
+
+
+
+
+
+
+ #Gradient boost model to prodict Median house value
+#Set the target and features apart
+X = dataset.iloc[:, :-1].values
+y = dataset.iloc[:, -1].values
+
+
+
+
+
+# Splitting the dataset into the Training set and Test set
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 0)
+
+
+
+
+from sklearn.ensemble import GradientBoostingRegressor
+gradientregressor = GradientBoostingRegressor(max_depth = 2, n_estimators = 100, learning_rate = 0.1)
+
+
+
+
+#Train the model
+model = gradientregressor.fit(X_train,y_train)
+
+
+
+
+
+#Evaluate the model
+y_train_pred = model.predict(X_train)
+y_test_pred = model.predict(X_test)
+train_mse = mean_squared_error(y_train_pred, y_train)
+test_mse = mean_squared_error(y_test_pred, y_test)
+print("Train MSE: ", train_mse)
+print("Test MSE: ", test_mse)
+
+
+
+
+#Tune hyperparameter
+LR = {'learning_rate':[0.2, 0.15, 0.1,0.05], 'n_estimators':[100,150,200,250]}
+tuning = GridSearchCV(estimator = GradientBoostingRegressor(), param_grid = LR, scoring = 'neg_mean_squared_error')
+tuning.fit(X_train, y_train)
+best_model = tuning.best_estimator_
+best_model.fit(X_train, y_train)
+
+
+
+
+#Evaluate the model
+y_train_pred = best_model.predict(X_train)
+y_test_pred = best_model.predict(X_test)
+train_mse = mean_squared_error(y_train_pred, y_train)
+test_mse = mean_squared_error(y_test_pred, y_test)
+print("Train MSE: ", train_mse)
+print("Test MSE: ", test_mse)
+
+
+
+#Use cross validation to run the model again, since the dataset is quite small
+from sklearn.model_selection import cross_val_score
+scores = cross_val_score(GradientBoostingRegressor(max_depth = 2, n_estimators = 250, learning_rate = 0.05), X_train, y_train,
+                         scoring="neg_mean_squared_error", cv=10)
+gradient_mse_scores = -scores
+
+
+
+
+
+def display_scores(scores):
+    print("Scores:", scores)
+    print("Mean:", scores.mean())
+    print("Standard deviation:", scores.std())
+
+
+
+
+display_scores(gradient_mse_scores)
+
+
+
+
+# Used lasso regression to model NOX level, and cross validation to test that lasso regression model is reasonable
+# Used gradient boosted tree to model median house value. The house value is cencored, but only few cases are, so I leave 
+#them as it is, and used cross validation to test the gradient boosted tree model, and turns out the model with hypermarameter
+#tuning is over fitting the model, and did not good on test set, we should use cross validation model to predict the house value
+
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+import seaborn as sns
+
+
+df = pd.read_csv('weatherAUS.csv')
+df.sample(5)
+
+
+
+
+# Getting rid of the columns with objects which will not be used in our model:
+df.drop(['Date', 'Location', 'WindGustDir', 'WindDir9am', 'WindDir3pm', 'RISK_MM'], axis=1, inplace=True)
+df.head(5)
+
+
+
+
+# And we need to replace NaN values with mean values of each column:
+df.fillna(df.mean(), inplace=True)
+df.head(5)
+
+
+
+
+# Now we can change that day and next days'predictions (yes and no) to 1 and 0:
+df.RainToday = [1 if each == 'Yes' else 0 for each in df.RainToday]
+df.RainTomorrow = [1 if each == 'Yes' else 0 for each in df.RainTomorrow]
+df.sample(3)
+
+
+
+
+X = df.iloc[:, :-1].values
+y = df.iloc[:, -1].values
+
+
+
+# Splitting the dataset into the Training set and Test set
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 0)
+
+
+
+# Feature Scaling
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+
+
+
+
+# Training the Logistic Regression model on the Training set
+from sklearn.linear_model import LogisticRegression
+classifier = LogisticRegression(random_state = 0)
+classifier.fit(X_train, y_train)
+
+
+
+# Making the Confusion Matrix
+from sklearn.metrics import confusion_matrix, accuracy_score
+y_pred = classifier.predict(X_test)
+cm = confusion_matrix(y_test, y_pred)
+print(cm)
+accuracy_score(y_test, y_pred)
+
+
+
+from sklearn.metrics import precision_score, recall_score 
+precision_score(y_test, y_pred) 
+
+
+
+
+recall_score(y_test, y_pred)
+
+
+
+
+
+from sklearn.metrics import f1_score
+f1_score(y_test, y_pred)
+
+
+
+# Training the K-NN model on the Training set
+from sklearn.neighbors import KNeighborsClassifier
+classifier = KNeighborsClassifier(n_neighbors = 5, metric = 'minkowski', p = 2)
+classifier.fit(X_train, y_train)
+
+
+
+
+# Making the Confusion Matrix
+from sklearn.metrics import confusion_matrix, accuracy_score
+y_pred = classifier.predict(X_test)
+cm = confusion_matrix(y_test, y_pred)
+print(cm)
+accuracy_score(y_test, y_pred)
+
+
+
+from sklearn.metrics import precision_score, recall_score 
+precision_score(y_test, y_pred) 
+
+
+
+recall_score(y_test, y_pred)
+
+
+
+
+from sklearn.metrics import f1_score
+f1_score(y_test, y_pred)
+
+
+
+
+#Two classifiers logistic and knn are used to run the model
+#Measure for the model performance is based on precision,because
+#I care more about if model predicts it is rainning, how likely it is true,
+#the precision of logistic regression model is higher, so the final model I pick is the logistic regression,
+#with 71% of precision. L2 penalty is applied as it is the default for LogisticRegression package from sklearn
